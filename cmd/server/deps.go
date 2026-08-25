@@ -38,10 +38,10 @@ func buildDeps(cfg *config.Config, db *sql.DB) *deps {
 	// logs these events to stdout instead of persisting them.
 	auditService := service.NewAuditService(cfg.DBDriver, auditRepo)
 
-	authService := service.NewAuthService(userRepo, memberRepo, roleRepo, companyRepo, resetRepo, cfg.JWTSecret, cfg.JWTExpiration)
+	authService := service.NewAuthService(userRepo, memberRepo, roleRepo, companyRepo, resetRepo, auditService, cfg.JWTSecret, cfg.JWTExpiration)
 	companyService := service.NewCompanyService(companyRepo, auditService)
 	memberService := service.NewMemberService(memberRepo, userRepo, roleRepo, auditService)
-	adminService := service.NewAdminService(companyRepo, userRepo, memberRepo)
+	adminService := service.NewAdminService(companyRepo, userRepo, memberRepo, auditRepo, cfg.DBDriver)
 
 	viewHandler, err := handler.NewViewHandler()
 	if err != nil {

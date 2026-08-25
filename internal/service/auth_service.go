@@ -27,6 +27,7 @@ type AuthService struct {
 	roles     *repository.RoleRepository
 	companies *repository.CompanyRepository
 	resets    *repository.PasswordResetRepository
+	audit     AuditService
 
 	jwtSecret     string
 	jwtExpiration int
@@ -38,6 +39,7 @@ func NewAuthService(
 	roles *repository.RoleRepository,
 	companies *repository.CompanyRepository,
 	resets *repository.PasswordResetRepository,
+	audit AuditService,
 	jwtSecret string,
 	jwtExpiration int,
 ) *AuthService {
@@ -47,6 +49,7 @@ func NewAuthService(
 		roles:         roles,
 		companies:     companies,
 		resets:        resets,
+		audit:         audit,
 		jwtSecret:     jwtSecret,
 		jwtExpiration: jwtExpiration,
 	}
@@ -85,7 +88,8 @@ func (s *AuthService) Register(ctx context.Context, email, password, firstName, 
 		return nil, "", err
 	}
 
-	if err := s.createOwnedCompany(ctx, user.ID, companyName); err != nil {
+	company, err := s.createOwnedCompany(ctx, user.ID, companyName)
+	if err != nil {
 		return nil, "", err
 	}
 
@@ -98,22 +102,23 @@ func (s *AuthService) Register(ctx context.Context, email, password, firstName, 
 	if err != nil {
 		return nil, "", err
 	}
+	s.audit.Log(ctx, user.ID, "user.register", "user", user.ID, company.ID, "email="+email+" company="+companyName)
 	return user, token, nil
 }
 
 // createOwnedCompany creates a new company for userID and makes them its
 // Admin. Slug collisions (e.g. two "Acme" signups) are resolved by
 // appending a short random suffix.
-func (s *AuthService) createOwnedCompany(ctx context.Context, userID, companyName string) error {
+func (s *AuthService) createOwnedCompany(ctx context.Context, userID, companyName string) (*models.Company, error) {
 	slug := utils.Slugify(companyName)
 	if _, err := s.companies.GetBySlug(ctx, slug); err == nil {
 		suffix, err := utils.GenerateToken()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		slug = slug + "-" + suffix[:6]
 	} else if !errors.Is(err, repository.ErrNotFound) {
-		return err
+		return nil, err
 	}
 
 	company := &models.Company{
@@ -125,12 +130,12 @@ func (s *AuthService) createOwnedCompany(ctx context.Context, userID, companyNam
 		CreatedBy: userID,
 	}
 	if err := s.companies.Create(ctx, company); err != nil {
-		return err
+		return nil, err
 	}
 
 	role, err := s.roles.GetSystemRoleByName(ctx, "Admin")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	now := time.Now()
@@ -142,7 +147,10 @@ func (s *AuthService) createOwnedCompany(ctx context.Context, userID, companyNam
 		Status:    models.MemberStatusActive,
 		JoinedAt:  &now,
 	}
-	return s.members.Create(ctx, member)
+	if err := s.members.Create(ctx, member); err != nil {
+		return nil, err
+	}
+	return company, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, email, password string) (*models.User, string, error) {
@@ -171,6 +179,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*model
 			if err != nil {
 				return nil, "", err
 			}
+			s.audit.Log(ctx, user.ID, "user.login", "user", user.ID, m.CompanyID, "email="+email)
 			return user, token, nil
 		}
 	}
@@ -179,6 +188,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*model
 	if err != nil {
 		return nil, "", err
 	}
+	s.audit.Log(ctx, user.ID, "user.login", "user", user.ID, "", "email="+email)
 	return user, token, nil
 }
 
@@ -285,6 +295,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string) error {
 	}
 
 	log.Printf("[DEV] password reset requested for %s — no email service configured, share this link manually: /reset-password?token=%s (valid %s)", email, rawToken, passwordResetTTL)
+	s.audit.Log(ctx, user.ID, "user.password_reset_requested", "user", user.ID, "", "email="+email)
 	return nil
 }
 
@@ -310,5 +321,9 @@ func (s *AuthService) ResetPassword(ctx context.Context, rawToken, newPassword s
 		return err
 	}
 
-	return s.resets.MarkUsed(ctx, reset.ID)
+	if err := s.resets.MarkUsed(ctx, reset.ID); err != nil {
+		return err
+	}
+	s.audit.Log(ctx, reset.UserID, "user.password_reset_completed", "user", reset.UserID, "", "")
+	return nil
 }

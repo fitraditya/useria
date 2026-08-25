@@ -48,6 +48,7 @@ var defaultPermissions = []permissionSeed{
 	{"members:delete", "Remove team members", "members"},
 	{"settings:read", "View settings", "settings"},
 	{"settings:write", "Edit settings", "settings"},
+	{"audit:read", "View audit logs", "audit"},
 }
 
 type roleSeed struct {
@@ -65,6 +66,7 @@ var defaultRoles = []roleSeed{
 			"companies:read", "companies:create", "companies:write", "companies:delete",
 			"members:read", "members:write", "members:delete",
 			"settings:read", "settings:write",
+			"audit:read",
 		},
 	},
 	{

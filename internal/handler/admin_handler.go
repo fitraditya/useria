@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/fitraditya/useria/internal/repository"
 	"github.com/fitraditya/useria/internal/service"
 	"github.com/fitraditya/useria/internal/utils"
 )
@@ -32,4 +33,19 @@ func (h *AdminHandler) Users(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.JSON(w, http.StatusOK, users)
+}
+
+type activityResponse struct {
+	Supported bool                           `json:"supported"`
+	Logs      []repository.AuditLogWithActor `json:"logs"`
+}
+
+func (h *AdminHandler) Activity(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	logs, supported, err := h.admin.ListActivity(r.Context(), q.Get("company_id"), q.Get("name"), q.Get("email"), q.Get("action"), q.Get("date_from"), q.Get("date_to"))
+	if err != nil {
+		utils.JSONError(w, http.StatusInternalServerError, "failed to list activity")
+		return
+	}
+	utils.JSON(w, http.StatusOK, activityResponse{Supported: supported, Logs: logs})
 }

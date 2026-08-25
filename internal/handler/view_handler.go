@@ -126,3 +126,7 @@ func (v *ViewHandler) AdminDashboard() http.HandlerFunc {
 func (v *ViewHandler) AdminUsers() http.HandlerFunc {
 	return v.renderDashboard("templates/admin/users.html", "Users", "users", "admin")
 }
+
+func (v *ViewHandler) AdminLogs() http.HandlerFunc {
+	return v.renderDashboard("templates/admin/logs.html", "Logs", "logs", "admin")
+}

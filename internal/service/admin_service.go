@@ -15,10 +15,12 @@ type AdminService struct {
 	companies *repository.CompanyRepository
 	users     *repository.UserRepository
 	members   *repository.MemberRepository
+	audit     *repository.AuditRepository
+	dbDriver  string
 }
 
-func NewAdminService(companies *repository.CompanyRepository, users *repository.UserRepository, members *repository.MemberRepository) *AdminService {
-	return &AdminService{companies: companies, users: users, members: members}
+func NewAdminService(companies *repository.CompanyRepository, users *repository.UserRepository, members *repository.MemberRepository, audit *repository.AuditRepository, dbDriver string) *AdminService {
+	return &AdminService{companies: companies, users: users, members: members, audit: audit, dbDriver: dbDriver}
 }
 
 func (s *AdminService) Stats(ctx context.Context) (AdminStats, error) {
@@ -42,4 +44,16 @@ func (s *AdminService) ListUsers(ctx context.Context, companyID, name, email str
 		return []repository.MemberWithUserAndCompany{}, nil
 	}
 	return s.members.ListAcrossCompanies(ctx, companyID, name, email)
+}
+
+// ListActivity returns the audit trail matching the given filters. Audit
+// entries are only persisted under the mysql driver (see AuditService) — on
+// sqlite this returns supported=false without querying, since the
+// audit_logs table doesn't exist there.
+func (s *AdminService) ListActivity(ctx context.Context, companyID, name, email, action, dateFrom, dateTo string) (logs []repository.AuditLogWithActor, supported bool, err error) {
+	if s.dbDriver != "mysql" {
+		return []repository.AuditLogWithActor{}, false, nil
+	}
+	logs, err = s.audit.List(ctx, companyID, name, email, action, dateFrom, dateTo)
+	return logs, true, err
 }

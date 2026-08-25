@@ -1,0 +1,90 @@
+{{define "content"}}
+<div id="error" class="hidden mb-4 rounded-lg bg-error-50 px-4 py-3 text-sm text-error-700 dark:bg-error-500/15 dark:text-error-500"></div>
+<div id="unsupported" class="hidden mb-4 rounded-lg bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:bg-warning-500/15 dark:text-warning-400">
+  Audit log persistence requires MySQL. This server is running on SQLite (dev mode) — activity is only printed to the server console, not stored here.
+</div>
+
+<div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+  <div class="relative lg:col-span-2">
+    <input
+      type="text" id="filter-company-input" placeholder="All companies" autocomplete="off"
+      class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+    />
+    <div id="filter-company-dropdown" class="hidden absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"></div>
+  </div>
+  <input
+    type="text" id="filter-name" placeholder="Search by name"
+    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+  />
+  <input
+    type="text" id="filter-email" placeholder="Search by email"
+    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+  />
+  <select
+    id="filter-action"
+    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+  >
+    <option value="">All activity</option>
+    <option value="user.register">Register</option>
+    <option value="user.login">Login</option>
+    <option value="user.password_reset_requested">Password reset requested</option>
+    <option value="user.password_reset_completed">Password reset completed</option>
+    <option value="company.create">Company created</option>
+    <option value="company.update">Company updated</option>
+    <option value="company.suspend">Company suspended</option>
+    <option value="company.activate">Company activated</option>
+    <option value="company.delete">Company deleted</option>
+    <option value="member.invite">Member invited</option>
+    <option value="member.role_update">Member role changed</option>
+    <option value="member.remove">Member removed</option>
+  </select>
+  <input
+    type="date" id="filter-date-from"
+    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+  />
+  <input
+    type="date" id="filter-date-to"
+    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+  />
+</div>
+
+<div class="mb-4 flex items-center justify-between">
+  <p id="log-count" class="text-sm text-gray-500 dark:text-gray-400"></p>
+  <div class="flex items-center gap-2">
+    <label for="refresh-interval" class="text-sm text-gray-500 dark:text-gray-400">Auto-refresh</label>
+    <select
+      id="refresh-interval"
+      class="dark:bg-dark-900 h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+    >
+      <option value="0">Off</option>
+      <option value="5">5s</option>
+      <option value="10" selected>10s</option>
+      <option value="30">30s</option>
+      <option value="60">60s</option>
+    </select>
+  </div>
+</div>
+
+<div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+  <div class="max-w-full overflow-x-auto">
+    <table class="min-w-full">
+      <thead>
+        <tr class="border-b border-gray-100 dark:border-gray-800">
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Time</p></th>
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Actor</p></th>
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Activity</p></th>
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Company</p></th>
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Details</p></th>
+        </tr>
+      </thead>
+      <tbody id="log-rows" class="divide-y divide-gray-100 dark:divide-gray-800"></tbody>
+    </table>
+  </div>
+  <p id="log-empty" class="hidden px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400 sm:px-6">No activity matches these filters.</p>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/admin-logs.js"></script>
+<script>AdminLogs.init();</script>
+{{end}}
