@@ -37,7 +37,8 @@ type updateCompanyRequest struct {
 }
 
 func (h *CompanyHandler) List(w http.ResponseWriter, r *http.Request) {
-	companies, err := h.companies.List(r.Context())
+	q := r.URL.Query()
+	companies, err := h.companies.List(r.Context(), q.Get("name"), q.Get("admin_email"), q.Get("status"))
 	if err != nil {
 		utils.JSONError(w, http.StatusInternalServerError, "failed to list companies")
 		return

@@ -54,8 +54,8 @@ func (s *CompanyService) Create(ctx context.Context, name, description, website,
 	return s.companies.GetByID(ctx, c.ID)
 }
 
-func (s *CompanyService) List(ctx context.Context) ([]models.Company, error) {
-	return s.companies.List(ctx)
+func (s *CompanyService) List(ctx context.Context, name, adminEmail, status string) ([]repository.CompanyWithAdmin, error) {
+	return s.companies.List(ctx, name, adminEmail, status)
 }
 
 func (s *CompanyService) Get(ctx context.Context, id string) (*models.Company, error) {

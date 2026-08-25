@@ -1,0 +1,45 @@
+{{define "content"}}
+<div id="error" class="hidden mb-4 rounded-lg bg-error-50 px-4 py-3 text-sm text-error-700 dark:bg-error-500/15 dark:text-error-500"></div>
+
+<div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+  <div class="relative">
+    <input
+      type="text" id="filter-company-input" placeholder="All companies" autocomplete="off"
+      class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+    />
+    <div id="filter-company-dropdown" class="hidden absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"></div>
+  </div>
+  <input
+    type="text" id="filter-name" placeholder="Search by name"
+    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+  />
+  <input
+    type="text" id="filter-email" placeholder="Search by email"
+    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+  />
+</div>
+
+<div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+  <div class="max-w-full overflow-x-auto">
+    <table class="min-w-full">
+      <thead>
+        <tr class="border-b border-gray-100 dark:border-gray-800">
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">User</p></th>
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Company</p></th>
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Role</p></th>
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Status</p></th>
+          <th class="px-5 py-3 sm:px-6"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Joined</p></th>
+        </tr>
+      </thead>
+      <tbody id="user-rows" class="divide-y divide-gray-100 dark:divide-gray-800"></tbody>
+    </table>
+  </div>
+  <p id="user-hint" class="px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400 sm:px-6">Filter by company, name, or email to find users.</p>
+  <p id="user-empty" class="hidden px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400 sm:px-6">No users match these filters.</p>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/admin-users.js"></script>
+<script>AdminUsers.init();</script>
+{{end}}

@@ -18,6 +18,15 @@ const Companies = {
     });
     document.getElementById('company-form').addEventListener('submit', (e) => this.submit(e));
 
+    let debounceTimer;
+    const debouncedLoad = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => this.load(), 300);
+    };
+    document.getElementById('filter-name').addEventListener('input', debouncedLoad);
+    document.getElementById('filter-admin-email').addEventListener('input', debouncedLoad);
+    document.getElementById('filter-status').addEventListener('change', () => this.load());
+
     await this.load();
   },
 
@@ -34,9 +43,20 @@ const Companies = {
   async load() {
     const errorEl = document.getElementById('error');
     const tbody = document.getElementById('company-rows');
+    const emptyEl = document.getElementById('company-empty');
     try {
-      const companies = await Useria.apiFetch('/admin/companies');
+      const params = new URLSearchParams();
+      const name = document.getElementById('filter-name').value.trim();
+      const adminEmail = document.getElementById('filter-admin-email').value.trim();
+      const status = document.getElementById('filter-status').value;
+      if (name) params.set('name', name);
+      if (adminEmail) params.set('admin_email', adminEmail);
+      if (status) params.set('status', status);
+      const qs = params.toString();
+
+      const companies = await Useria.apiFetch('/admin/companies' + (qs ? '?' + qs : ''));
       tbody.innerHTML = '';
+      emptyEl.classList.toggle('hidden', (companies || []).length > 0);
 
       (companies || []).forEach((c) => {
         const tr = document.createElement('tr');
@@ -52,6 +72,7 @@ const Companies = {
             <span class="block font-medium text-gray-800 text-theme-sm dark:text-white/90">${c.name}</span>
             <span class="block text-gray-500 text-theme-xs dark:text-gray-400">${c.slug}</span>
           </td>
+          <td class="px-5 py-4 sm:px-6"><span class="text-theme-sm text-gray-500 dark:text-gray-400">${c.admin_email || '—'}</span></td>
           <td class="px-5 py-4 sm:px-6"><span class="text-theme-sm text-gray-500 dark:text-gray-400 capitalize">${c.plan}</span></td>
           <td class="px-5 py-4 sm:px-6">${this.statusBadge(c.status)}</td>
           <td class="px-5 py-4 sm:px-6"><span class="text-theme-sm text-gray-500 dark:text-gray-400">${Useria.formatDate(c.created_at)}</span></td>

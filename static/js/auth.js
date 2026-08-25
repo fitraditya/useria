@@ -17,7 +17,7 @@ const Auth = {
         if (window.USERIA_APP === 'admin') {
           if (claims && claims.company_id) {
             Useria.setToken(data.token);
-            window.location.href = '/admin/companies';
+            window.location.href = '/admin/dashboard';
           } else {
             throw new Error('This account does not have platform admin access.');
           }

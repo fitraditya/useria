@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fitraditya/useria/internal/models"
@@ -12,6 +13,14 @@ import (
 
 type CompanyRepository struct {
 	db *sql.DB
+}
+
+// CompanyWithAdmin is a company plus the email of its first (oldest) Admin
+// member, if it has one — used by the SuperAdmin companies list so it can
+// filter/display by admin email without a separate lookup per row.
+type CompanyWithAdmin struct {
+	models.Company
+	AdminEmail *string `json:"admin_email,omitempty"`
 }
 
 func NewCompanyRepository(db *sql.DB) *CompanyRepository {
@@ -60,26 +69,63 @@ func (r *CompanyRepository) Create(ctx context.Context, c *models.Company) error
 	return nil
 }
 
-// List returns non-deleted companies. Soft-deleted rows are excluded.
-func (r *CompanyRepository) List(ctx context.Context) ([]models.Company, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, slug, description, logo_url, website, status, plan, created_by, created_at, updated_at, deleted_at
-		 FROM companies WHERE deleted_at IS NULL ORDER BY created_at DESC`,
-	)
+// List returns non-deleted companies, optionally filtered by name substring,
+// admin email substring, and/or exact status. Any empty filter is skipped.
+func (r *CompanyRepository) List(ctx context.Context, name, adminEmail, status string) ([]CompanyWithAdmin, error) {
+	query := strings.Builder{}
+	query.WriteString(`
+		SELECT c.id, c.name, c.slug, c.description, c.logo_url, c.website, c.status, c.plan, c.created_by, c.created_at, c.updated_at, c.deleted_at,
+		       (SELECT u.email FROM company_members cm
+		        JOIN users u ON u.id = cm.user_id
+		        JOIN roles r ON r.id = cm.role_id
+		        WHERE cm.company_id = c.id AND cm.deleted_at IS NULL AND r.company_id IS NULL AND r.name = 'Admin'
+		        ORDER BY cm.created_at ASC LIMIT 1) AS admin_email
+		FROM companies c
+		WHERE c.deleted_at IS NULL`)
+	var args []any
+	if name != "" {
+		query.WriteString(" AND c.name LIKE ?")
+		args = append(args, "%"+name+"%")
+	}
+	if status != "" {
+		query.WriteString(" AND c.status = ?")
+		args = append(args, status)
+	}
+	if adminEmail != "" {
+		query.WriteString(` AND EXISTS (
+			SELECT 1 FROM company_members cm
+			JOIN users u ON u.id = cm.user_id
+			JOIN roles r ON r.id = cm.role_id
+			WHERE cm.company_id = c.id AND cm.deleted_at IS NULL AND r.company_id IS NULL AND r.name = 'Admin' AND u.email LIKE ?
+		)`)
+		args = append(args, "%"+adminEmail+"%")
+	}
+	query.WriteString(" ORDER BY c.created_at DESC")
+
+	rows, err := r.db.QueryContext(ctx, query.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("list companies: %w", err)
 	}
 	defer rows.Close()
 
-	var out []models.Company
+	var out []CompanyWithAdmin
 	for rows.Next() {
-		var c models.Company
-		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.Description, &c.LogoURL, &c.Website, &c.Status, &c.Plan, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt, &c.DeletedAt); err != nil {
+		var c CompanyWithAdmin
+		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.Description, &c.LogoURL, &c.Website, &c.Status, &c.Plan, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt, &c.DeletedAt, &c.AdminEmail); err != nil {
 			return nil, fmt.Errorf("scan company: %w", err)
 		}
 		out = append(out, c)
 	}
 	return out, rows.Err()
+}
+
+// Count returns the number of non-deleted companies.
+func (r *CompanyRepository) Count(ctx context.Context) (int, error) {
+	var n int
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM companies WHERE deleted_at IS NULL`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count companies: %w", err)
+	}
+	return n, nil
 }
 
 func (r *CompanyRepository) Update(ctx context.Context, c *models.Company) error {

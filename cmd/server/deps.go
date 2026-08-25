@@ -22,6 +22,7 @@ type deps struct {
 	memberHandler     *handler.MemberHandler
 	invitationHandler *handler.InvitationHandler
 	roleHandler       *handler.RoleHandler
+	adminHandler      *handler.AdminHandler
 	viewHandler       *handler.ViewHandler
 }
 
@@ -40,6 +41,7 @@ func buildDeps(cfg *config.Config, db *sql.DB) *deps {
 	authService := service.NewAuthService(userRepo, memberRepo, roleRepo, companyRepo, resetRepo, cfg.JWTSecret, cfg.JWTExpiration)
 	companyService := service.NewCompanyService(companyRepo, auditService)
 	memberService := service.NewMemberService(memberRepo, userRepo, roleRepo, auditService)
+	adminService := service.NewAdminService(companyRepo, userRepo, memberRepo)
 
 	viewHandler, err := handler.NewViewHandler()
 	if err != nil {
@@ -55,6 +57,7 @@ func buildDeps(cfg *config.Config, db *sql.DB) *deps {
 		memberHandler:     handler.NewMemberHandler(memberService),
 		invitationHandler: handler.NewInvitationHandler(memberService),
 		roleHandler:       handler.NewRoleHandler(roleRepo),
+		adminHandler:      handler.NewAdminHandler(adminService),
 		viewHandler:       viewHandler,
 	}
 }

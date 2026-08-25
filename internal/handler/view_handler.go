@@ -118,3 +118,11 @@ func (v *ViewHandler) CompanyMembers() http.HandlerFunc {
 func (v *ViewHandler) Companies() http.HandlerFunc {
 	return v.renderDashboard("templates/admin/companies.html", "Companies", "companies", "admin")
 }
+
+func (v *ViewHandler) AdminDashboard() http.HandlerFunc {
+	return v.renderDashboard("templates/admin/dashboard.html", "Dashboard", "dashboard", "admin")
+}
+
+func (v *ViewHandler) AdminUsers() http.HandlerFunc {
+	return v.renderDashboard("templates/admin/users.html", "Users", "users", "admin")
+}

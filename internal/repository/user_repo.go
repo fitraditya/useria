@@ -66,6 +66,15 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, id, passwordHash st
 	return nil
 }
 
+// Count returns the total number of registered users.
+func (r *UserRepository) Count(ctx context.Context) (int, error) {
+	var n int
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count users: %w", err)
+	}
+	return n, nil
+}
+
 func (r *UserRepository) scanOne(row *sql.Row) (*models.User, error) {
 	var u models.User
 	err := row.Scan(

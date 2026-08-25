@@ -36,6 +36,8 @@ func newAdminRouter(d *deps) chi.Router {
 			pr.With(appmw.RequireScope("companies:read")).Get("/admin/companies/{id}", d.companyHandler.Get)
 			pr.With(appmw.RequireScope("companies:write")).Put("/admin/companies/{id}", d.companyHandler.Update)
 			pr.With(appmw.RequireScope("companies:delete")).Delete("/admin/companies/{id}", d.companyHandler.Delete)
+			pr.With(appmw.RequireScope("companies:read")).Get("/admin/stats", d.adminHandler.Stats)
+			pr.With(appmw.RequireScope("users:read")).Get("/admin/users", d.adminHandler.Users)
 		})
 	})
 
@@ -46,7 +48,9 @@ func newAdminRouter(d *deps) chi.Router {
 	r.Get("/forgot-password", d.viewHandler.ForgotPassword("admin"))
 	r.Get("/reset-password", d.viewHandler.ResetPassword("admin"))
 	r.Get("/profile", d.viewHandler.Profile("admin"))
+	r.Get("/admin/dashboard", d.viewHandler.AdminDashboard())
 	r.Get("/admin/companies", d.viewHandler.Companies())
+	r.Get("/admin/users", d.viewHandler.AdminUsers())
 
 	return r
 }

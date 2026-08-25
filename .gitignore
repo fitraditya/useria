@@ -2,3 +2,4 @@ bin/
 .env
 seed.yaml
 *.log
+*.db

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fitraditya/useria/internal/models"
@@ -23,6 +24,19 @@ type MemberWithUser struct {
 	FirstName *string `json:"first_name,omitempty"`
 	LastName  *string `json:"last_name,omitempty"`
 	RoleName  string  `json:"role_name"`
+}
+
+// MemberWithUserAndCompany is a membership row joined with both the user
+// and the company it belongs to — used by the SuperAdmin cross-company
+// users list.
+type MemberWithUserAndCompany struct {
+	models.CompanyMember
+	Email       string  `json:"email"`
+	FirstName   *string `json:"first_name,omitempty"`
+	LastName    *string `json:"last_name,omitempty"`
+	RoleName    string  `json:"role_name"`
+	CompanyName string  `json:"company_name"`
+	CompanySlug string  `json:"company_slug"`
 }
 
 type MemberRepository struct {
@@ -139,6 +153,55 @@ func (r *MemberRepository) ListByCompanyID(ctx context.Context, companyID string
 			&m.Email, &m.FirstName, &m.LastName, &m.RoleName,
 		); err != nil {
 			return nil, fmt.Errorf("scan company member: %w", err)
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// ListAcrossCompanies returns memberships spanning all companies, filtered
+// by any combination of company, name (matched against first or last name),
+// and email substring. Used by the SuperAdmin Users page, which is
+// deliberately never called with all filters blank (see AdminService.ListUsers).
+func (r *MemberRepository) ListAcrossCompanies(ctx context.Context, companyID, name, email string) ([]MemberWithUserAndCompany, error) {
+	query := strings.Builder{}
+	query.WriteString(`
+		SELECT cm.id, cm.company_id, cm.user_id, cm.role_id, cm.status, cm.invited_at, cm.joined_at, cm.created_at, cm.updated_at,
+		       u.email, u.first_name, u.last_name, ro.name, c.name, c.slug
+		FROM company_members cm
+		JOIN users u ON u.id = cm.user_id
+		JOIN roles ro ON ro.id = cm.role_id
+		JOIN companies c ON c.id = cm.company_id
+		WHERE cm.deleted_at IS NULL AND c.deleted_at IS NULL`)
+	var args []any
+	if companyID != "" {
+		query.WriteString(" AND cm.company_id = ?")
+		args = append(args, companyID)
+	}
+	if name != "" {
+		query.WriteString(" AND (u.first_name LIKE ? OR u.last_name LIKE ?)")
+		args = append(args, "%"+name+"%", "%"+name+"%")
+	}
+	if email != "" {
+		query.WriteString(" AND u.email LIKE ?")
+		args = append(args, "%"+email+"%")
+	}
+	query.WriteString(" ORDER BY cm.created_at DESC LIMIT 200")
+
+	rows, err := r.db.QueryContext(ctx, query.String(), args...)
+	if err != nil {
+		return nil, fmt.Errorf("list members across companies: %w", err)
+	}
+	defer rows.Close()
+
+	var out []MemberWithUserAndCompany
+	for rows.Next() {
+		var m MemberWithUserAndCompany
+		if err := rows.Scan(
+			&m.ID, &m.CompanyID, &m.UserID, &m.RoleID, &m.Status, &m.InvitedAt, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
+			&m.Email, &m.FirstName, &m.LastName, &m.RoleName, &m.CompanyName, &m.CompanySlug,
+		); err != nil {
+			return nil, fmt.Errorf("scan member across companies: %w", err)
 		}
 		out = append(out, m)
 	}
