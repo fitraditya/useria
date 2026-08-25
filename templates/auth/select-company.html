@@ -1,0 +1,30 @@
+{{define "content"}}
+<div>
+  <div class="mb-5 sm:mb-8">
+    <h1 class="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">Choose a company</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Select which company you want to work in.</p>
+  </div>
+
+  <div id="error" class="hidden mb-4 rounded-lg bg-error-50 px-4 py-3 text-sm text-error-700 dark:bg-error-500/15 dark:text-error-500"></div>
+
+  <div class="mb-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+    <h2 class="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Your companies</h2>
+    <div id="company-list" class="space-y-2"></div>
+    <p id="company-empty" class="hidden text-sm text-gray-500 dark:text-gray-400">No active companies yet.</p>
+  </div>
+
+  <div id="invite-section" class="hidden mb-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+    <h2 class="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Pending invitations</h2>
+    <div id="invite-list" class="space-y-2"></div>
+  </div>
+
+  <button id="logout-btn" type="button" class="w-full text-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+    Sign out
+  </button>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/auth.js"></script>
+<script>Auth.initSelectCompany();</script>
+{{end}}

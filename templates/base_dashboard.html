@@ -1,0 +1,30 @@
+{{define "base"}}
+<!doctype html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+</head>
+<body x-data="{ page: '{{.PageKey}}', loaded: true, sidebarToggle: false, isProfileInfoModal: false, isMemberInviteModal: false, isCompanyModalOpen: false, companyModalMode: 'create' }">
+  {{template "preloader" .}}
+
+  <div class="flex h-screen overflow-hidden">
+    {{template "sidebar" .}}
+
+    <div class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto">
+      {{template "overlay" .}}
+      {{template "header" .}}
+
+      <main>
+        <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+          {{template "breadcrumb" .}}
+          {{template "content" .}}
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/static/vendor/tailadmin/bundle.js"></script>
+  {{block "scripts" .}}{{end}}
+</body>
+</html>
+{{end}}

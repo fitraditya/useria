@@ -1,0 +1,24 @@
+# Seed data for `seed` (bootstraps the SuperAdmin and demo companies below,
+# in addition to the base roles/permissions). Edit freely — idempotent, safe
+# to rerun after changing this file; existing users keep their password,
+# only role/membership gets reconciled.
+
+super_admin:
+  email: admin@useria.local
+  password: change-me-now
+  first_name: Super
+  last_name: Admin
+
+companies:
+  - name: Acme Widgets
+    admin:
+      email: owner@acme.test
+      password: change-me-now
+      first_name: Company
+      last_name: Admin
+    members:
+      - email: staff@acme.test
+        password: change-me-now
+        first_name: Team
+        last_name: Member
+        role: Member
