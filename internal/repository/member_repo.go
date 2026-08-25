@@ -47,7 +47,7 @@ func (r *MemberRepository) listByUserIDStatus(ctx context.Context, userID, statu
 		FROM company_members cm
 		JOIN companies c ON c.id = cm.company_id
 		JOIN roles ro ON ro.id = cm.role_id
-		WHERE cm.user_id = ? AND cm.status = ?
+		WHERE cm.user_id = ? AND cm.status = ? AND cm.deleted_at IS NULL
 	`, userID, status)
 	if err != nil {
 		return nil, fmt.Errorf("list memberships: %w", err)
@@ -65,12 +65,33 @@ func (r *MemberRepository) listByUserIDStatus(ctx context.Context, userID, statu
 	return out, rows.Err()
 }
 
+// GetByCompanyAndUser returns the active (non-deleted) membership, if any.
 func (r *MemberRepository) GetByCompanyAndUser(ctx context.Context, companyID, userID string) (*models.CompanyMember, error) {
 	var m models.CompanyMember
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, company_id, user_id, role_id, status, invited_at, joined_at, created_at, updated_at
+		SELECT id, company_id, user_id, role_id, status, invited_at, joined_at, created_at, updated_at, deleted_at
+		FROM company_members WHERE company_id = ? AND user_id = ? AND deleted_at IS NULL
+	`, companyID, userID).Scan(&m.ID, &m.CompanyID, &m.UserID, &m.RoleID, &m.Status, &m.InvitedAt, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt, &m.DeletedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("scan membership: %w", err)
+	}
+	return &m, nil
+}
+
+// GetByCompanyAndUserAny returns the membership row for (companyID, userID)
+// regardless of deletion state, since the (company_id, user_id) DB
+// constraint is unique across soft-deleted rows too — callers re-inviting a
+// previously-removed member need this to find the row to revive instead of
+// inserting a duplicate.
+func (r *MemberRepository) GetByCompanyAndUserAny(ctx context.Context, companyID, userID string) (*models.CompanyMember, error) {
+	var m models.CompanyMember
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, company_id, user_id, role_id, status, invited_at, joined_at, created_at, updated_at, deleted_at
 		FROM company_members WHERE company_id = ? AND user_id = ?
-	`, companyID, userID).Scan(&m.ID, &m.CompanyID, &m.UserID, &m.RoleID, &m.Status, &m.InvitedAt, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt)
+	`, companyID, userID).Scan(&m.ID, &m.CompanyID, &m.UserID, &m.RoleID, &m.Status, &m.InvitedAt, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt, &m.DeletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -83,9 +104,9 @@ func (r *MemberRepository) GetByCompanyAndUser(ctx context.Context, companyID, u
 func (r *MemberRepository) GetByID(ctx context.Context, id string) (*models.CompanyMember, error) {
 	var m models.CompanyMember
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, company_id, user_id, role_id, status, invited_at, joined_at, created_at, updated_at
-		FROM company_members WHERE id = ?
-	`, id).Scan(&m.ID, &m.CompanyID, &m.UserID, &m.RoleID, &m.Status, &m.InvitedAt, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt)
+		SELECT id, company_id, user_id, role_id, status, invited_at, joined_at, created_at, updated_at, deleted_at
+		FROM company_members WHERE id = ? AND deleted_at IS NULL
+	`, id).Scan(&m.ID, &m.CompanyID, &m.UserID, &m.RoleID, &m.Status, &m.InvitedAt, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt, &m.DeletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -102,7 +123,7 @@ func (r *MemberRepository) ListByCompanyID(ctx context.Context, companyID string
 		FROM company_members cm
 		JOIN users u ON u.id = cm.user_id
 		JOIN roles ro ON ro.id = cm.role_id
-		WHERE cm.company_id = ?
+		WHERE cm.company_id = ? AND cm.deleted_at IS NULL
 		ORDER BY cm.created_at ASC
 	`, companyID)
 	if err != nil {
@@ -136,6 +157,22 @@ func (r *MemberRepository) Create(ctx context.Context, m *models.CompanyMember) 
 	return nil
 }
 
+// Revive un-deletes a previously-removed membership row for a fresh invite,
+// resetting it to a pending invite under the given role rather than
+// inserting a new row (which would violate the (company_id, user_id)
+// uniqueness constraint the soft-deleted row still occupies).
+func (r *MemberRepository) Revive(ctx context.Context, id, roleID string) error {
+	now := time.Now()
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE company_members SET deleted_at = NULL, status = 'invited', role_id = ?, invited_at = ?, joined_at = NULL, updated_at = ? WHERE id = ?`,
+		roleID, now, now, id,
+	)
+	if err != nil {
+		return fmt.Errorf("revive company member: %w", err)
+	}
+	return nil
+}
+
 func (r *MemberRepository) UpdateRole(ctx context.Context, id, roleID string) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE company_members SET role_id = ?, updated_at = ? WHERE id = ?`,
@@ -159,8 +196,13 @@ func (r *MemberRepository) Accept(ctx context.Context, id string) error {
 	return nil
 }
 
+// Delete soft-deletes the membership (sets deleted_at) rather than removing
+// the row, so historical/audit data stays intact.
 func (r *MemberRepository) Delete(ctx context.Context, id string) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM company_members WHERE id = ?`, id)
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE company_members SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL`,
+		time.Now(), time.Now(), id,
+	)
 	if err != nil {
 		return fmt.Errorf("delete company member: %w", err)
 	}

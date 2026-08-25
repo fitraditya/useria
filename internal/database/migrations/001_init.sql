@@ -59,6 +59,7 @@ CREATE TABLE company_members (
     joined_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL COMMENT 'soft delete',
     UNIQUE KEY uq_company_user (company_id, user_id),
     INDEX idx_company_id (company_id),
     INDEX idx_user_id (user_id),

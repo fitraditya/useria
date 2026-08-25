@@ -54,14 +54,27 @@ func (s *MemberService) Invite(ctx context.Context, companyID, actorUserID, emai
 		return nil, err
 	}
 
-	if _, err := s.members.GetByCompanyAndUser(ctx, companyID, user.ID); err == nil {
-		return nil, ErrAlreadyMember
-	} else if !errors.Is(err, repository.ErrNotFound) {
+	// The (company_id, user_id) row is unique even across soft-deleted rows,
+	// so a previously-removed member needs reviving rather than a fresh
+	// insert — otherwise this would collide with their old row.
+	existing, err := s.members.GetByCompanyAndUserAny(ctx, companyID, user.ID)
+	if err != nil && !errors.Is(err, repository.ErrNotFound) {
 		return nil, err
+	}
+	if err == nil && existing.DeletedAt == nil {
+		return nil, ErrAlreadyMember
 	}
 
 	if err := s.validateRole(ctx, companyID, roleID); err != nil {
 		return nil, err
+	}
+
+	if existing != nil {
+		if err := s.members.Revive(ctx, existing.ID, roleID); err != nil {
+			return nil, err
+		}
+		s.audit.Log(ctx, actorUserID, "member.invite", "company_member", existing.ID, companyID, "invited="+email)
+		return s.members.GetByID(ctx, existing.ID)
 	}
 
 	now := time.Now()

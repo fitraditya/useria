@@ -57,6 +57,7 @@ CREATE TABLE company_members (
     joined_at DATETIME,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
     UNIQUE (company_id, user_id)
 );
 CREATE INDEX idx_members_company_id ON company_members(company_id);
