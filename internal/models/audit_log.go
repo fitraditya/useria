@@ -3,7 +3,7 @@ package models
 import "time"
 
 // AuditLog records a sensitive mutation for accountability. Only persisted
-// under the MySQL driver — see service.AuditService.
+// under the Postgres driver — see service.AuditService.
 type AuditLog struct {
 	ID           string    `db:"id" json:"id"`
 	ActorUserID  string    `db:"actor_user_id" json:"actor_user_id"`

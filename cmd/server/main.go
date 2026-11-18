@@ -1,12 +1,10 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/fitraditya/useria/internal/config"
 	"github.com/fitraditya/useria/internal/database"
@@ -49,7 +47,10 @@ func main() {
 
 	switch cmd {
 	case "migrate":
-		runMigration(db, cfg.MigrationPath())
+		if err := database.Migrate(db, cfg.MigrationPath()); err != nil {
+			log.Fatalf("migrate: %v", err)
+		}
+		log.Println("migration complete")
 	case "seed":
 		if err := database.Seed(db); err != nil {
 			log.Fatalf("seed: %v", err)
@@ -82,7 +83,7 @@ func seedFilePath() string {
 	return "seed.yaml"
 }
 
-func seedAdminFromData(db *sql.DB, data *database.SeedData) {
+func seedAdminFromData(db *database.DB, data *database.SeedData) {
 	if data.SuperAdmin == nil {
 		return
 	}
@@ -101,7 +102,7 @@ func seedAdminFromData(db *sql.DB, data *database.SeedData) {
 	}
 }
 
-func seedCompaniesFromData(db *sql.DB, data *database.SeedData) {
+func seedCompaniesFromData(db *database.DB, data *database.SeedData) {
 	for _, c := range data.Companies {
 		if c.Name == "" || c.Admin.Email == "" || c.Admin.Password == "" {
 			log.Fatalf("company %q needs a name and an admin email/password", c.Name)
@@ -140,31 +141,4 @@ func serve(name, port string, handler http.Handler, env string) {
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatalf("%s server: %v", name, err)
 	}
-}
-
-func runMigration(db *sql.DB, path string) {
-	sqlBytes, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatalf("read migration %s: %v", path, err)
-	}
-
-	var cleaned []string
-	for _, line := range strings.Split(string(sqlBytes), "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "--") {
-			continue
-		}
-		cleaned = append(cleaned, line)
-	}
-
-	statements := strings.Split(strings.Join(cleaned, "\n"), ";")
-	for _, stmt := range statements {
-		stmt = strings.TrimSpace(stmt)
-		if stmt == "" {
-			continue
-		}
-		if _, err := db.Exec(stmt); err != nil {
-			log.Fatalf("exec migration statement: %v\n%s", err, stmt)
-		}
-	}
-	log.Println("migration complete")
 }

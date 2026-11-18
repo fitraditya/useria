@@ -10,10 +10,10 @@ import (
 )
 
 type RoleRepository struct {
-	db *sql.DB
+	db DBTX
 }
 
-func NewRoleRepository(db *sql.DB) *RoleRepository {
+func NewRoleRepository(db DBTX) *RoleRepository {
 	return &RoleRepository{db: db}
 }
 

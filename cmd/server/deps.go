@@ -1,10 +1,10 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 
 	"github.com/fitraditya/useria/internal/config"
+	"github.com/fitraditya/useria/internal/database"
 	"github.com/fitraditya/useria/internal/handler"
 	"github.com/fitraditya/useria/internal/repository"
 	"github.com/fitraditya/useria/internal/service"
@@ -26,7 +26,7 @@ type deps struct {
 	viewHandler       *handler.ViewHandler
 }
 
-func buildDeps(cfg *config.Config, db *sql.DB) *deps {
+func buildDeps(cfg *config.Config, db *database.DB) *deps {
 	userRepo := repository.NewUserRepository(db)
 	memberRepo := repository.NewMemberRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
@@ -34,7 +34,7 @@ func buildDeps(cfg *config.Config, db *sql.DB) *deps {
 	resetRepo := repository.NewPasswordResetRepository(db)
 	auditRepo := repository.NewAuditRepository(db)
 
-	// audit_logs only exists under the mysql migration — sqlite (dev) just
+	// audit_logs only exists under the postgres migration — sqlite (dev) just
 	// logs these events to stdout instead of persisting them.
 	auditService := service.NewAuditService(cfg.DBDriver, auditRepo)
 

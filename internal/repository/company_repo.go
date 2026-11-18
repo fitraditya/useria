@@ -12,7 +12,7 @@ import (
 )
 
 type CompanyRepository struct {
-	db *sql.DB
+	db DBTX
 }
 
 // CompanyWithAdmin is a company plus the email of its first (oldest) Admin
@@ -23,7 +23,7 @@ type CompanyWithAdmin struct {
 	AdminEmail *string `json:"admin_email,omitempty"`
 }
 
-func NewCompanyRepository(db *sql.DB) *CompanyRepository {
+func NewCompanyRepository(db DBTX) *CompanyRepository {
 	return &CompanyRepository{db: db}
 }
 

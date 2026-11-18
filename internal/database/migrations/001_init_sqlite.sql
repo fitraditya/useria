@@ -1,4 +1,4 @@
--- SQLite dev-mode schema for Useria (mirrors 001_init.sql for MySQL)
+-- SQLite dev-mode schema for Useria (mirrors 001_init_postgres.sql for Postgres)
 
 CREATE TABLE users (
     id TEXT PRIMARY KEY,

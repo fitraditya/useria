@@ -19,6 +19,7 @@ type Config struct {
 	DBUser       string
 	DBPassword   string
 	DBName       string
+	DBSSLMode    string
 	DBSQLitePath string
 
 	JWTSecret     string
@@ -54,12 +55,13 @@ func Load() (*Config, error) {
 		AdminPort:  getEnv("ADMIN_PORT", "9080"),
 		ServerEnv:  getEnv("SERVER_ENV", "development"),
 
-		DBDriver:     getEnv("DB_DRIVER", "mysql"),
+		DBDriver:     getEnv("DB_DRIVER", "postgres"),
 		DBHost:       getEnv("DB_HOST", "localhost"),
-		DBPort:       getEnv("DB_PORT", "3306"),
-		DBUser:       getEnv("DB_USER", "root"),
+		DBPort:       getEnv("DB_PORT", "5432"),
+		DBUser:       getEnv("DB_USER", "postgres"),
 		DBPassword:   getEnv("DB_PASSWORD", ""),
 		DBName:       getEnv("DB_NAME", "saas_oauth2"),
+		DBSSLMode:    getEnv("DB_SSLMODE", "disable"),
 		DBSQLitePath: getEnv("DB_SQLITE_PATH", "./useria.db"),
 
 		JWTSecret:     mustGetEnv("JWT_SECRET"),
@@ -79,18 +81,25 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) DSN() string {
-	if c.DBDriver == "sqlite" {
+	switch c.DBDriver {
+	case "sqlite", "sqlite3":
 		return c.DBSQLitePath
+	case "postgres", "postgresql", "pgx":
+		return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+			c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName, c.DBSSLMode)
+	default:
+		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4&loc=Local",
+			c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName)
 	}
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4&loc=Local",
-		c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName)
 }
 
 func (c *Config) MigrationPath() string {
-	if c.DBDriver == "sqlite" {
+	switch c.DBDriver {
+	case "sqlite", "sqlite3":
 		return "internal/database/migrations/001_init_sqlite.sql"
+	default:
+		return "internal/database/migrations/001_init_postgres.sql"
 	}
-	return "internal/database/migrations/001_init.sql"
 }
 
 func getEnv(key, fallback string) string {

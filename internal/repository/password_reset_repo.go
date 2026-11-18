@@ -11,10 +11,10 @@ import (
 )
 
 type PasswordResetRepository struct {
-	db *sql.DB
+	db DBTX
 }
 
-func NewPasswordResetRepository(db *sql.DB) *PasswordResetRepository {
+func NewPasswordResetRepository(db DBTX) *PasswordResetRepository {
 	return &PasswordResetRepository{db: db}
 }
 

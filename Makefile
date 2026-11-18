@@ -1,4 +1,4 @@
-.PHONY: run admin migrate seed build docker-build docker-run docker-admin tidy
+.PHONY: run admin migrate seed build docker-build docker-run docker-admin tidy db-up db-down
 
 run:
 	go run ./cmd/server
@@ -26,3 +26,10 @@ docker-admin:
 
 tidy:
 	go mod tidy
+
+# Local Postgres for development (docker).
+db-up:
+	docker run --rm -d --name useria-pg -e POSTGRES_PASSWORD=password -e POSTGRES_DB=saas_oauth2 -p 5432:5432 postgres:16
+
+db-down:
+	docker rm -f useria-pg

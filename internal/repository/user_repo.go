@@ -11,10 +11,10 @@ import (
 )
 
 type UserRepository struct {
-	db *sql.DB
+	db DBTX
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
+func NewUserRepository(db DBTX) *UserRepository {
 	return &UserRepository{db: db}
 }
 

@@ -95,7 +95,7 @@ var defaultRoles = []roleSeed{
 }
 
 // Seed inserts default system permissions and roles if they do not already exist.
-func Seed(db *sql.DB) error {
+func Seed(db *DB) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -210,7 +210,7 @@ func Seed(db *sql.DB) error {
 // bootstrap "Useria Platform" company that holds the membership) if needed.
 // Run Seed first so the SuperAdmin system role is present.
 // Returns true if a new admin user was created.
-func SeedAdmin(db *sql.DB, email, password, firstName, lastName string) (bool, error) {
+func SeedAdmin(db *DB, email, password, firstName, lastName string) (bool, error) {
 	if firstName == "" {
 		firstName = "Super"
 	}
@@ -296,7 +296,7 @@ func SeedAdmin(db *sql.DB, email, password, firstName, lastName string) (bool, e
 // it holding roleName — creating the user if needed, or updating their role
 // if they're already a member. Run Seed first so the role exists. Returns
 // true if a new user was created.
-func SeedCompanyUser(db *sql.DB, companyName, userEmail, userPassword, firstName, lastName, roleName string) (bool, error) {
+func SeedCompanyUser(db *DB, companyName, userEmail, userPassword, firstName, lastName, roleName string) (bool, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return false, fmt.Errorf("begin tx: %w", err)

@@ -11,7 +11,7 @@ import (
 
 // AuditService records sensitive mutations (company create/update/suspend/
 // delete, member invite/role-change/remove) for accountability. Under
-// MySQL it persists to audit_logs; under sqlite (dev) it just logs to
+// Postgres it persists to audit_logs; under sqlite (dev) it just logs to
 // stdout, since sqlite dev databases get thrown away constantly and don't
 // warrant a real audit trail.
 type AuditService interface {
@@ -21,7 +21,7 @@ type AuditService interface {
 // NewAuditService picks the implementation based on the configured DB
 // driver. companyID and metadata may be empty.
 func NewAuditService(driver string, repo *repository.AuditRepository) AuditService {
-	if driver == "mysql" {
+	if driver == "postgres" {
 		return &dbAuditService{repo: repo}
 	}
 	return &logAuditService{}

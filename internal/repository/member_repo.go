@@ -40,10 +40,10 @@ type MemberWithUserAndCompany struct {
 }
 
 type MemberRepository struct {
-	db *sql.DB
+	db DBTX
 }
 
-func NewMemberRepository(db *sql.DB) *MemberRepository {
+func NewMemberRepository(db DBTX) *MemberRepository {
 	return &MemberRepository{db: db}
 }
 

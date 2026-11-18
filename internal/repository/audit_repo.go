@@ -2,21 +2,20 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strings"
 
 	"github.com/fitraditya/useria/internal/models"
 )
 
-// AuditRepository writes to (and, under mysql, reads from) the audit_logs
-// table. Only used under the mysql driver — audit_logs isn't created by the
+// AuditRepository writes to (and, under postgres, reads from) the audit_logs
+// table. Only used under the postgres driver — audit_logs isn't created by the
 // sqlite migration, see service.AuditService.
 type AuditRepository struct {
-	db *sql.DB
+	db DBTX
 }
 
-func NewAuditRepository(db *sql.DB) *AuditRepository {
+func NewAuditRepository(db DBTX) *AuditRepository {
 	return &AuditRepository{db: db}
 }
 
